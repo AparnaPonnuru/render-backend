@@ -1,0 +1,47 @@
+{
+  "name": "careers-backend-node-v.1",
+  "version": "1.0.0",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node ./bin/www",
+    "dev": "nodemon ./bin/www",
+    "seed:programs": "node seeds/seed_generated_programs.js",
+    "migrate:enrich": "node migrations/enrich_universities.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://RamMahender1@bitbucket.org/globalxchange/careers-backend-node-v.1.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://bitbucket.org/globalxchange/careers-backend-node-v.1/issues"
+  },
+  "homepage": "https://bitbucket.org/globalxchange/careers-backend-node-v.1#readme",
+  "description": "",
+  "dependencies": {
+    "@google/generative-ai": "^0.24.1",
+    "aws-sdk": "^2.1692.0",
+    "axios": "^1.4.0",
+    "bcrypt": "^5.1.1",
+    "bcryptjs": "^3.0.3",
+    "body-parser": "^1.20.2",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "crypto": "^1.0.1",
+    "dotenv": "^16.4.7",
+    "ejs": "^3.1.9",
+    "express": "^4.22.1",
+    "groq-sdk": "^0.35.0",
+    "http-errors": "^2.0.1",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^7.8.3",
+    "morgan": "^1.10.1",
+    "node-fetch": "^3.3.2",
+    "nodemailer": "^6.9.8",
+    "nodemon": "^3.0.1",
+    "openai": "^6.9.0",
+    "razorpay": "^2.9.6"
+  }
+}
