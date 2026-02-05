@@ -11,96 +11,61 @@ const signUp = async (req, res) => {
   try {
     const { email, username, password } = req.body;
 
-    // ===============================
-    // 1️⃣ Validate fields
-    // ===============================
     if (!email || !username || !password) {
       return res.status(400).json({
         success: false,
-        message: "All fields (email, username, password) are required",
+        message: "All fields are required",
       });
     }
 
-    // ===============================
-    // 2️⃣ Check duplicate email
-    // ===============================
     const existingUser = await User.findOne({ email });
-
     if (existingUser) {
       return res.status(400).json({
         success: false,
-        message: "User is already registered with this email",
+        message: "User already exists",
       });
     }
 
-    // ===============================
-    // 3️⃣ Generate OTP
-    // ===============================
     const OTP = generateOTP();
-    const currentTime = new Date();
 
-    // ===============================
-    // 4️⃣ Create user
-    // ===============================
-    const temporalUser = new User({
+    const user = new User({
       username,
       email,
-      password, // let model hash automatically
+      password,
       OTP,
-      isBlocked: false,
-      OTPAttempts: 0,
-      OTPCreatedTime: currentTime,
-      status: "inactive",
-      profileComplete: false,
+      OTPCreatedTime: new Date(),
       OTPverified: false,
+      status: "inactive",
     });
 
-    await temporalUser.save();
+    await user.save();
 
-    // ===============================
-    // 5️⃣ Send email FIRST (await 🔥)
-    // ===============================
-    await sendNotificationMail(
+    // ✅ DO NOT await email
+    sendNotificationMail(
       email,
       "Naavi Signup OTP",
-      `Dear User,<br>Your OTP: <b>${OTP}</b>`
-    );
+      `Your OTP is <b>${OTP}</b>`
+    ).catch(err => console.error("Mail failed:", err));
 
-    // ===============================
-    // 6️⃣ Generate token
-    // ===============================
     const token = jwt.sign(
-      { id: temporalUser._id },
+      { id: user._id },
       process.env.JWT_SECRET_KEY,
       { expiresIn: "1d" }
     );
 
-    const user = {
-      id: temporalUser._id,
-      username: temporalUser.username,
-      email: temporalUser.email,
-    };
-
-    // ===============================
-    // 7️⃣ SEND RESPONSE LAST 🔥
-    // ===============================
+    // ✅ ALWAYS respond immediately
     return res.status(200).json({
       success: true,
-      message: "User created successfully",
       otpSent: true,
       token,
-      user,
     });
 
-  } catch (error) {
-    console.error("SignUp Error:", error);
-
-    return res.status(500).json({
-      success: false,
-      message: "Something went wrong",
-    });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ success: false });
   }
 };
+
 
     // ✅ send mail AFTER response (non-blocking)
     
