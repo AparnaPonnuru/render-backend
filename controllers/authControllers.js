@@ -11,6 +11,9 @@ const signUp = async (req, res) => {
   try {
     const { email, username, password } = req.body;
 
+    // ===============================
+    // 1️⃣ Validate fields
+    // ===============================
     if (!email || !username || !password) {
       return res.status(400).json({
         success: false,
@@ -18,7 +21,11 @@ const signUp = async (req, res) => {
       });
     }
 
+    // ===============================
+    // 2️⃣ Check duplicate email
+    // ===============================
     const existingUser = await User.findOne({ email });
+
     if (existingUser) {
       return res.status(400).json({
         success: false,
@@ -26,24 +33,42 @@ const signUp = async (req, res) => {
       });
     }
 
+    // ===============================
+    // 3️⃣ Generate OTP
+    // ===============================
     const OTP = generateOTP();
     const currentTime = new Date();
 
+    // ===============================
+    // 4️⃣ Create user
+    // ===============================
     const temporalUser = new User({
       username,
       email,
-      password,
+      password, // let model hash automatically
       OTP,
       isBlocked: false,
       OTPAttempts: 0,
       OTPCreatedTime: currentTime,
       status: "inactive",
       profileComplete: false,
+      OTPverified: false,
     });
 
     await temporalUser.save();
 
-    // ✅ generate token first
+    // ===============================
+    // 5️⃣ Send email FIRST (await 🔥)
+    // ===============================
+    await sendNotificationMail(
+      email,
+      "Naavi Signup OTP",
+      `Dear User,<br>Your OTP: <b>${OTP}</b>`
+    );
+
+    // ===============================
+    // 6️⃣ Generate token
+    // ===============================
     const token = jwt.sign(
       { id: temporalUser._id },
       process.env.JWT_SECRET_KEY,
@@ -56,8 +81,10 @@ const signUp = async (req, res) => {
       email: temporalUser.email,
     };
 
-    // ✅ SEND RESPONSE FIRST (very important)
-    res.status(200).json({
+    // ===============================
+    // 7️⃣ SEND RESPONSE LAST 🔥
+    // ===============================
+    return res.status(200).json({
       success: true,
       message: "User created successfully",
       otpSent: true,
@@ -65,21 +92,18 @@ const signUp = async (req, res) => {
       user,
     });
 
-    // ✅ send mail AFTER response (non-blocking)
-    sendNotificationMail(
-      email,
-      "Naavi Signup OTP",
-      `Dear User,<br>Your OTP: ${OTP}<br>`
-    ).catch(err => console.error("Mail failed:", err));
-
   } catch (error) {
     console.error("SignUp Error:", error);
-    res.status(500).json({
+
+    return res.status(500).json({
       success: false,
       message: "Something went wrong",
     });
   }
 };
+
+    // ✅ send mail AFTER response (non-blocking)
+    
 
 
 
