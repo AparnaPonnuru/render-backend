@@ -19,6 +19,11 @@ const gx_transport = nodemailer.createTransport({
   },
 });
 
+gx_transport.verify((err, success) => {
+  if (err) console.log("❌ SMTP ERROR:", err);
+  else console.log("✅ SMTP READY");
+});
+
 // ===============================
 // OTP GENERATOR
 // ===============================
