@@ -11,7 +11,6 @@ const signUp = async (req, res) => {
   try {
     const { email, username, password } = req.body;
 
-    // Validate input fields
     if (!email || !username || !password) {
       return res.status(400).json({
         success: false,
@@ -19,7 +18,6 @@ const signUp = async (req, res) => {
       });
     }
 
-    // Check if the email already exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({
@@ -28,15 +26,13 @@ const signUp = async (req, res) => {
       });
     }
 
-    // Generate OTP for verification
     const OTP = generateOTP();
     const currentTime = new Date();
 
-    // Create new user — use plain password!
     const temporalUser = new User({
       username,
       email,
-      password, // pre-save hook in your model will hash automatically
+      password,
       OTP,
       isBlocked: false,
       OTPAttempts: 0,
@@ -45,26 +41,14 @@ const signUp = async (req, res) => {
       profileComplete: false,
     });
 
-    // Save user to DB (let model hash the password)
     await temporalUser.save();
 
-    // Send OTP email
-    try {
-      await sendNotificationMail(
-        email,
-        "Naavi Signup OTP",
-        `Dear User,<br>Your OTP: ${OTP}<br>`
-      );
-    } catch (err) {
-      console.error("Failed to send OTP email:", err);
-      return res.status(500).json({ success: false, message: "Failed to send OTP email" });
-    }
-
-    // Generate JWT token
-    const oneDayInSeconds = 86400;
-    const token = jwt.sign({ id: temporalUser._id }, process.env.JWT_SECRET_KEY, {
-      expiresIn: oneDayInSeconds,
-    });
+    // ✅ generate token first
+    const token = jwt.sign(
+      { id: temporalUser._id },
+      process.env.JWT_SECRET_KEY,
+      { expiresIn: "1d" }
+    );
 
     const user = {
       id: temporalUser._id,
@@ -72,22 +56,31 @@ const signUp = async (req, res) => {
       email: temporalUser.email,
     };
 
-    // Return response
-    return res.status(200).json({
+    // ✅ SEND RESPONSE FIRST (very important)
+    res.status(200).json({
       success: true,
       message: "User created successfully",
       otpSent: true,
       token,
       user,
     });
+
+    // ✅ send mail AFTER response (non-blocking)
+    sendNotificationMail(
+      email,
+      "Naavi Signup OTP",
+      `Dear User,<br>Your OTP: ${OTP}<br>`
+    ).catch(err => console.error("Mail failed:", err));
+
   } catch (error) {
     console.error("SignUp Error:", error);
-    return res.status(500).json({
+    res.status(500).json({
       success: false,
       message: "Something went wrong",
     });
   }
 };
+
 
 
 const checkEmailDuplicate = async (req, res) => {
