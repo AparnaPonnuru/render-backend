@@ -1,21 +1,39 @@
-const crypto = require("crypto");
+// =========================================
+//  📧 SENDGRID + AUTH CONTROLLER (FINAL)
+// =========================================
+
 const User = require("../models/users.model");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
 const sgMail = require("@sendgrid/mail");
 
 
-// ===============================
+// =========================================
 // SENDGRID CONFIG
-// ===============================
+// =========================================
+
+// ✅ Validate ENV first (prevents silent failures)
+if (!process.env.SENDGRID_API_KEY) {
+  console.error("❌ SENDGRID_API_KEY missing in environment");
+}
+
+if (!process.env.EMAIL_SERVICE_USER) {
+  console.error("❌ EMAIL_SERVICE_USER missing in environment");
+}
+
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
-const userEmail = process.env.EMAIL_SERVICE_USER; // verified sender email
+const userEmail = process.env.EMAIL_SERVICE_USER;
+
+console.log(
+  "📧 SendGrid Config:",
+  process.env.SENDGRID_API_KEY ? "Key Loaded ✅" : "Key Missing ❌"
+);
 
 
-// ===============================
+// =========================================
 // OTP GENERATOR
-// ===============================
+// =========================================
 const generateOTP = () => {
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
   console.log("Generated OTP:", otp);
@@ -23,36 +41,44 @@ const generateOTP = () => {
 };
 
 
-// ===============================
+// =========================================
 // SEND MAIL USING SENDGRID
-// ===============================
+// =========================================
 const sendNotificationMail = async (email, subject, message) => {
   try {
-    await sgMail.send({
+    const msg = {
       to: email,
-      from: userEmail, // MUST be verified sender
+      from: userEmail, // must be verified sender
       subject: subject || "Notification",
       html: `<p>${message}</p>`,
-    });
+    };
 
-    console.log("✅ Email sent via SendGrid");
+    const response = await sgMail.send(msg);
+
+    // ✅ VERY IMPORTANT → SendGrid returns 202 if success
+    console.log("✅ SendGrid Status:", response[0].statusCode);
+
     return true;
+
   } catch (error) {
-    console.error("❌ SendGrid Error:", error.response?.body || error);
+    console.error("❌ SendGrid FULL Error:", error);
     return false;
   }
 };
 
 
-// ===============================
+// =========================================
 // SIGNUP FUNCTION
-// ===============================
+// =========================================
 const saltRounds = 10;
 
 const signUp = async (req, res) => {
   try {
     const { email, username, password } = req.body;
 
+    // =========================
+    // Validate fields
+    // =========================
     if (!email || !username || !password) {
       return res.status(400).json({
         success: false,
@@ -60,7 +86,11 @@ const signUp = async (req, res) => {
       });
     }
 
+    // =========================
+    // Check duplicate
+    // =========================
     const existingUser = await User.findOne({ email });
+
     if (existingUser) {
       return res.status(400).json({
         success: false,
@@ -68,9 +98,10 @@ const signUp = async (req, res) => {
       });
     }
 
+    // =========================
+    // Create user
+    // =========================
     const OTP = generateOTP();
-    const currentTime = new Date();
-
     const hashedPassword = await bcrypt.hash(password, saltRounds);
 
     const temporalUser = new User({
@@ -78,20 +109,32 @@ const signUp = async (req, res) => {
       email,
       password: hashedPassword,
       OTP,
-      OTPCreatedTime: currentTime,
+      OTPCreatedTime: new Date(),
       OTPverified: false,
       status: false,
     });
 
     await temporalUser.save();
 
-    // ✅ SENDGRID MAIL
-    await sendNotificationMail(
+    // =========================
+    // Send OTP Email
+    // =========================
+    const mailSent = await sendNotificationMail(
       email,
       "Naavi Registration OTP",
       `Dear User,<br>Your OTP is: <b>${OTP}</b>`
     );
 
+    if (!mailSent) {
+      return res.status(500).json({
+        success: false,
+        message: "Email sending failed. Please try again.",
+      });
+    }
+
+    // =========================
+    // Generate JWT
+    // =========================
     const token = jwt.sign(
       { id: temporalUser._id },
       process.env.JWT_SECRET_KEY,
@@ -110,7 +153,8 @@ const signUp = async (req, res) => {
     });
 
   } catch (error) {
-    console.error("SignUp Error:", error);
+    console.error("❌ SignUp Error:", error);
+
     return res.status(500).json({
       success: false,
       message: "Signup failed",
@@ -119,9 +163,9 @@ const signUp = async (req, res) => {
 };
 
 
-// ===============================
+// =========================================
 // VERIFY OTP
-// ===============================
+// =========================================
 const verifyOTP = async (req, res) => {
   try {
     const { email, otp } = req.body;
@@ -137,12 +181,14 @@ const verifyOTP = async (req, res) => {
     }
 
     const otpAge = Date.now() - new Date(userFound.OTPCreatedTime).getTime();
+
     if (otpAge > 5 * 60 * 1000) {
       return res.status(400).json({ success: false, message: "OTP expired" });
     }
 
     userFound.OTPverified = true;
     userFound.status = true;
+
     await userFound.save();
 
     return res.status(200).json({
@@ -151,6 +197,8 @@ const verifyOTP = async (req, res) => {
     });
 
   } catch (err) {
+    console.error("❌ Verify OTP Error:", err);
+
     return res.status(500).json({
       success: false,
       message: "OTP verification failed",
@@ -159,6 +207,7 @@ const verifyOTP = async (req, res) => {
 };
 
 
+// =========================================
 module.exports = {
   signUp,
   verifyOTP,
