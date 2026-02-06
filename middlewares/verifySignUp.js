@@ -119,11 +119,64 @@ const signUp = async (req, res) => {
     // =========================
     // Send OTP Email
     // =========================
-    const mailSent = await sendNotificationMail(
-      email,
-      "Naavi Registration OTP",
-      `Dear User,<br>Your OTP is: <b>${OTP}</b>`
-    );
+const mailSent = await sendNotificationMail(
+  email,
+  "Verify your account 🔐",
+  `
+  <div style="
+    background:#f3f7fb;
+    padding:40px 10px;
+    font-family:Arial, sans-serif;
+    text-align:center;
+  ">
+
+    <div style="
+      max-width:450px;
+      margin:auto;
+      background:#ffffff;
+      padding:35px;
+      border-radius:12px;
+      box-shadow:0 10px 25px rgba(0,0,0,0.08);
+    ">
+
+      <!-- Logo (only image, no domain text) -->
+      <img 
+        src="/favicon3.png"
+        width="90"
+        style="margin-bottom:18px;"
+        alt="Logo"
+      />
+
+      <h2 style="margin:0;color:#222;">
+        Welcome 👋
+      </h2>
+
+      <p style="color:#555;font-size:14px;line-height:1.6;margin-top:12px;">
+        Thanks for registering.<br/>
+        Please verify your email using the OTP below.
+      </p>
+
+      <div style="
+        margin:25px 0;
+        font-size:34px;
+        font-weight:bold;
+        letter-spacing:7px;
+        background:#00B5F9;
+        color:#ffffff;
+        padding:14px 0;
+        border-radius:8px;
+      ">
+        ${OTP}
+      </div>
+
+      <p style="font-size:12px;color:#888;">
+        This code expires in 5 minutes.
+      </p>
+
+    </div>
+  </div>
+  `
+);
 
     if (!mailSent) {
       return res.status(500).json({

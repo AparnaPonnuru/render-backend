@@ -4,7 +4,6 @@ const User = require("../models/users.model");
 const verifyToken = async (req, res, next) => {
   try {
     let token;
-
     if (
       req.headers.authorization &&
       req.headers.authorization.startsWith("Bearer")
