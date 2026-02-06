@@ -43,6 +43,7 @@ var visitorRoutes = require('./Admin/routes/VisitorRoute');
 
 /* ------------------- NEW CORRECT STEPS ROUTER ------------------- */
 const stepsRouter = require("./routes/stepsRouter");
+const adminDashboardRoutes = require("./Admin/routes/adminDashboardRoutes");
 const subscriptionRoutes = require("./Admin/routes/subscriptionRoutes");
 const contactRoutes = require('./Admin/routes/contactRoutes');
 /* ------------------- APP SETUP ------------------- */
@@ -127,7 +128,7 @@ app.use("/api/payment", require("./routes/paymentRoutes"));
 //app.use("/api/subscription", require("./routes/subscriptionRoutes"));
 app.use("/api/admin-subscribe", subscriptionRoutes);
 app.use('/api/admin-contact', contactRoutes);
-
+app.use("/api/admin-dashboard", adminDashboardRoutes);
 app.use("/api", require("./routes/checkFormatted"));
 app.use("/api/regenerate", require("./routes/regenerateBatch.route"));
 app.use("/api/utils", require("./routes/addStepIds.route"));
